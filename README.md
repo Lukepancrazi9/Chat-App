@@ -20,7 +20,7 @@ nvm alias default 16.19.0
 
 - Clone the Repository:
 ```bash
-git clone https://github.com/Lukepancrazi9/meet-app.git
+git clone https://github.com/Lukepancrazi9/chat-app.git
 ```
 - Install Expo and Expo CLI, as this is the platform you’ll use to build your app;
 ```bash
