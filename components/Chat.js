@@ -64,6 +64,7 @@ const Chat = ({ route, navigation }) => {
         }}
       />
       {Platform.OS === "android" ? (<KeyboardAvoidingView behavior="height" />) : null}
+      {Platform.OS === "ios"?<KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={-210} />: null}
    </View>
  );
 }
@@ -71,8 +72,6 @@ const Chat = ({ route, navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center'
   }
 });
 
