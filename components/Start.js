@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, View, Text, Button, TextInput, ImageBackground, TouchableOpacity, Image } from 'react-native';
+import { StyleSheet, View, Text, Button, TextInput, ImageBackground, TouchableOpacity, Platform, KeyboardAvoidingView } from 'react-native';
 
 const Start = ({ navigation }) => {
     // State to hold the name input value
@@ -26,6 +26,10 @@ const Start = ({ navigation }) => {
             <View style={styles.colorButtonsContainer}>
               {/* Render a TouchableOpacity for each color option */}
               <TouchableOpacity
+                accessible={true}
+                accessibilityLabel="More options"
+                accessibilityHint="Lets you choose to send an image or your geolocation."
+                accessibilityRole="button"
                 style={[
                   styles.chooseColor,
                   { backgroundColor: "#090C08" },
@@ -70,6 +74,7 @@ const Start = ({ navigation }) => {
             <Text style={styles.textButton}>Start Chatting</Text>
           </TouchableOpacity>
         </View>
+        {Platform.OS === "android" ? (<KeyboardAvoidingView behavior="height" />) : null}
       </ImageBackground>
     );
   };
@@ -152,4 +157,3 @@ const Start = ({ navigation }) => {
     },
   });
   export default Start;
-  
