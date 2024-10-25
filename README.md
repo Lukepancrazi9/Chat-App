@@ -36,10 +36,12 @@ npm install firebase@9.13.0 --save
 ```
 - Settings > Project Settings > General tab > Your Apps > Firestore for Web and generate project configurations
 - Change Rules:
+```
   from allow read, write: if false;
   to allow read, write: if true;
-  
+```
 - In App.js file copy firebaseConfig variable:
+  ```
       const firebaseConfig = {
       apiKey: "your-api-key",
       authDomain: "your-authdomain",
@@ -48,9 +50,11 @@ npm install firebase@9.13.0 --save
       messagingSenderId: "your-messaging-sender-id",
       appId: "your-app-id",
        };
+  ```
 - Initialize Firebase
+```
   const app = initializeApp(firebaseConfig);
-  
+```
 ## Installation 
 
 - Clone the Repository:
