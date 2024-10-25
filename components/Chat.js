@@ -1,108 +1,175 @@
-import { useEffect, useState } from 'react';
-import { StyleSheet, View, Platform, KeyboardAvoidingView } from "react-native";
-import { GiftedChat, Bubble, InputToolbar } from "react-native-gifted-chat";
-import { onSnapshot, query, orderBy, collection, addDoc, } from "firebase/firestore";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useState, useEffect } from 'react';
+import { StyleSheet, View, Platform, KeyboardAvoidingView, Alert } from 'react-native';
+import { GiftedChat, Bubble, InputToolbar } from 'react-native-gifted-chat';
+import {
+    collection,
+    addDoc,
+    onSnapshot,
+    query,
+    orderBy
+} from 'firebase/firestore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import CustomActions from './CustomActions';
+import MapView from 'react-native-maps';
 
-const Chat = ({ db, route, navigation, isConnected }) => {
-  const { userID } = route.params;
-  const { name, background } = route.params;
-  const [messages, setMessages] = useState([]);
-  const onSend = (newMessages) => {
-    addDoc(collection(db, "messages"), newMessages[0]);
-  };
+const Chat = ({ db, storage, route, navigation, isConnected }) => {
 
-  const renderBubble = (props) => {
-    return (
-      <Bubble
-        {...props}
-        wrapperStyle={{
-          right: {
-            backgroundColor: "#484848",
-          },
-          left: {
-            backgroundColor: "#fff",
-          },
-        }}
-      />
-    );
-  };
-  const renderInputToolbar = (props) => {
-    if (isConnected) return <InputToolbar {...props} />;
-    else return null;
-  };
-  let unsubMessages;
+    // message state initialization using useState()
+    const [messages, setMessages] = useState([]);
+    const { name, backgroundColor, userID } = route.params;
 
-  // useEffect hook to set messages options
-  useEffect(() => {
-    if (isConnected === true) {
-      // unregister current onSnapshot() listener to avoid registering multiple listeners when
-      // useEffect code is re-executed.
-      if (unsubMessages) unsubMessages();
-      unsubMessages = null;
-      const q = query(collection(db, "messages"), orderBy("createdAt", "desc"));
-      // Subscribe to changes in the "messages" collection using onSnapshot.
-      // This function will be called whenever there are changes in the collection.
-      unsubMessages = onSnapshot(q, (documentsSnapshot) => {
-        // Initialize an empty array to store the new messages
-        let newMessages = [];
-        // Iterate through each document in the snapshot
-        documentsSnapshot.forEach((doc) => {
-          newMessages.push({
-            id: doc.id,
-            ...doc.data(),
-            createdAt: new Date(doc.data().createdAt.toMillis()),
-          });
-        });
-        cacheMessages(newMessages);
-        setMessages(newMessages);
-      });
-    } else loadCachedMessages();
-    // Clean up code
-    return () => {
-      if (unsubMessages) unsubMessages();
-    };
-  }, [isConnected]); // isConnected used as a dependency value and will allow the component to call the callback of useEffect whenewer the isConnected prop's value changes.
-  const cacheMessages = async (messagesToCache) => {
-    try {
-      await AsyncStorage.setItem("messages", JSON.stringify(messagesToCache));
-    } catch (error) {
-      console.log(error.message);
+    // Fetch messages from database in real time
+    let unsubMessages;
+
+    useEffect(() => {
+        navigation.setOptions({ title: name });
+
+        if (isConnected === true) {
+            // unregister current onSnapshot() listener to avoid registering multiple listeners when
+            // useEffect code is re-executed.
+            if (unsubMessages) unsubMessages();
+            unsubMessages = null;
+
+            // If connection, fetch data from Firestore Database
+            const q = query(collection(db, "messages"), orderBy("createdAt", "desc"));
+            unsubMessages = onSnapshot(q, (docs) => {
+                let newMessages = [];
+                docs.forEach(doc => {
+                    newMessages.push({
+                        _id: doc.id,
+                        ...doc.data(),
+                        createdAt: new Date(doc.data().createdAt.toMillis())
+                    })
+                })
+                cacheMessages(newMessages);
+                setMessages(newMessages);
+            });
+        } else loadCachedMessages(); //Fetches data from AsyncStorage if no connection
+
+        // Clean up code
+        return () => {
+            if (unsubMessages) unsubMessages();
+        }
+    }, [isConnected]);
+
+    // function called if isConnected props false in useEffect(), ||[] returns empty array to cachedMessaged if not set yet in AsyncStorage (known as 'logical OR assignment operator')
+    const loadCachedMessages = async () => {
+        const cachedMessages = await AsyncStorage.getItem("messages") || [];
+        setMessages(JSON.parse(cachedMessages));
     }
-  };
-  // Call this function if the isConnected prop turns out to be false in useEffect()
-  const loadCachedMessages = async () => {
-    // The empty array is for cachedMessages in case AsyncStorage() fails when the messages item hasn’t been set yet in AsyncStorage.
-    const cachedMessages = (await AsyncStorage.getItem("messages")) || [];
-    setMessages(JSON.parse(cachedMessages));
-  };
 
-  useEffect(() => {
-    navigation.setOptions({ title: name });
-  }, []);
+    const cacheMessages = async (messagesToCache) => {
+        try {
+            await AsyncStorage.setItem('messages', JSON.stringify(messagesToCache));
+        } catch (error) {
+            Alert.alert('Unable to cache messages');
+        }
+    };
 
- return (
-   <View style={[styles.container, {backgroundColor: background}]}>
-      <GiftedChat
-        messages={messages}
-        renderBubble={renderBubble}
-        renderInputToolbar={renderInputToolbar}
-        onSend={(messages) => onSend(messages)}
-        user={{
-          _id: userID,
-          name: name,
-        }}
-      />
-      {Platform.OS === "android" ? (<KeyboardAvoidingView behavior="height" />) : null}
-      {Platform.OS === "ios"?<KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={-210} />: null}
-   </View>
- );
-}
+    // what's called when user sends a message
+    const onSend = (newMessages) => {
+        addDoc(collection(db, "messages"), newMessages[0])
+    };
+
+    // Returns InputToolbar if connected, otherwise returns a null
+    const renderInputToolbar = (props) => {
+        if (isConnected) return <InputToolbar {...props} />;
+        else return null;
+    };
+
+    const renderBubble = (props) => {
+        return (
+            <Bubble
+                {...props}
+                wrapperStyle={{
+                    // sets received message bubble appearance
+                    right: {
+                        backgroundColor: '#000'
+                    },
+                    // sets senders message bubble appearance
+                    left: {
+                        backgroundColor: '#FFF'
+                    }
+                }}
+            />
+        );
+    };
+
+    // Creates circle button
+    const renderCustomActions = (props) => {
+        return (
+            <CustomActions
+                onSend={onSend}
+                storage={storage}
+                userID={userID}
+                {...props}
+            />
+        );
+    };
+
+    // If currentMessage contains location data, return MapView
+    const renderCustomView = (props) => {
+        const { currentMessage } = props;
+        if (currentMessage.location) {
+            return (
+                <MapView
+                    style={{
+                        width: 150,
+                        height: 100,
+                        borderRadius: 13,
+                        margin: 3
+                    }}
+                    region={{
+                        latitude: currentMessage.location.latitude,
+                        longitude: currentMessage.location.longitude,
+                        latitudeDelta: 0.0922,
+                        longitudeDelta: 0.0421,
+                    }}
+                />
+            );
+        }
+        return null;
+    }
+
+    return (
+        // pass selected background color from start screen
+        <View style={[styles.container, { backgroundColor: backgroundColor }]}>
+            <GiftedChat
+                // accessiblity features
+                accessible={true}
+                accessibilityLabel="Message input field"
+                accessibilityHint="Type your message here and then press enter"
+                accessibilityRole="message-input"
+                // displays message bubbles
+                messages={messages}
+                renderBubble={renderBubble}
+                renderInputToolbar={renderInputToolbar}
+                onSend={messages => onSend(messages)}
+                renderActions={renderCustomActions}
+                renderCustomView={renderCustomView}
+                // attach correct user ID and name to message
+                user={{
+                    _id: userID,
+                    name: name,
+                }}
+            />
+            {/* Stops keyboard from hiding message input field for android */}
+            {Platform.OS === 'android' ? (
+                <KeyboardAvoidingView behavior="height" />
+            ) : null}
+            {/* and ios */}
+            {Platform.OS === 'ios' ? (
+                <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={-210} />
+            ) : null}
+        </View>
+    );
+};
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  }
+    container: {
+        flex: 1,
+        marginBottom: 40
+    }
 });
 
 export default Chat;
